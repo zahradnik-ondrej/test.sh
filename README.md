@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧪 🛠 test.sh
+# 🧪🛠 test.sh
 
 ### An overengineered testing script for C programs.
 
