@@ -12,7 +12,7 @@ program_name="$(basename "${code_path%.*}")"
 program_path="${relative_path}/${program_name}"
 sample_dir_path="${relative_path}/sample/CZE/"
 
-if [[ "$1" == *.c ]]; then
+if [[ "$1" == *.c || "$1" == *.cpp ]]; then
   shift
 
   compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}" "$code_path" "$@" 2>&1)
