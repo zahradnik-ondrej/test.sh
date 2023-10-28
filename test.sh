@@ -1,9 +1,10 @@
 #!/bin/bash
 
-SHOW_DIFF=1
 DEFAULT_COMPILE_ARGUMENTS="-Wall -g -fsanitize=address"
-#DEFAULT_COMPILE_ARGUMENTS="-Wall -Werror -g -fsanitize=address"
 CONTINUE_AFTER_TESTS=1
+
+#DEFAULT_COMPILE_ARGUMENTS="-Wall -Werror -g -fsanitize=address"
+#SHOW_DIFF=1
 
 relative_path=$(dirname "$1")
 code_path="$1"
@@ -25,8 +26,10 @@ fi
 
 no_color="\e[0;0m"
 
-green="\e[1;32m"
-red="\e[1;31m"
+#green="\e[0;32m"
+green_bold="\e[1;32m"
+#red="\e[0;31m"
+red_bold="\e[1;31m"
 blue="\e[0;34m"
 dark_gray="\e[0;90m"
 dark_gray_bold="\e[1;90m"
@@ -41,37 +44,45 @@ for in_sample_file in "${sample_dir_path}"*_in.txt; do
   diff_exit_status=$?
 
   if [ $diff_exit_status -eq 0 ]; then
-    printf "${green}\U25B6 OK:${no_color} %s${dark_gray}\n" "$in_sample_file"
+    printf "${green_bold}\U25B6 OK:${no_color} %s${dark_gray}\n" "$in_sample_file"
     cat "$in_sample_file"
-    
+
     echo
   elif [ $diff_exit_status -eq 1 ]; then
-    printf "${red}\U25BC Fail: %s \U25BC \n${no_color}" "$in_sample_file"
-    
+    printf "${red_bold}\U25BC Fail: %s \U25BC \n${no_color}" "$in_sample_file"
+
     printf "${blue}=== Sample Input Data ===\n${no_color}"
     cat "$in_sample_file"
-    
+
     printf "${blue}=== Expected Sample Output Data ===\n${no_color}"
     cat "$out_sample_file"
-    
+
     printf "${blue}=== Received Output Data ===\n${no_color}"
     cat my_out.txt
-    
-    if [ "$SHOW_DIFF" -eq 1 ]; then
-      printf "${blue}=== Output Data Difference ===\n${no_color}"
-      tail -n +2 out_data_diff.txt
-    fi
-    
+
+    # if [ "$SHOW_DIFF" -eq 1 ]; then
+    #   printf "${blue}=== Output Data Difference ===\n${no_color}"
+    #
+    #   tail -n +2 out_data_diff.txt
+    #
+    #   awk '
+    #   /^</ { print "\033[32m" $0 "\033[0m" }
+    #   /^>/ { print "\033[31m" $0 "\033[0m" }
+    #   /^---/ { print $0 }
+    #   ' out_data_diff.txt
+    #
+    # fi
+
     echo
   else
     printf "${orange}\U25BC Caution: %s \U25BC \n${no_color}" "$in_sample_file"
-    
+
     printf "${blue}=== Sample Input Data ===\n${no_color}"
     cat "$in_sample_file"
-    
+
     printf "${blue}=== Received Output Data ===\n${no_color}"
     cat my_out.txt
-    
+
     echo
   fi
 done
