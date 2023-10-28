@@ -43,26 +43,35 @@ for in_sample_file in "${sample_dir_path}"*_in.txt; do
   if [ $diff_exit_status -eq 0 ]; then
     printf "${green}\U25B6 OK:${no_color} %s${dark_gray}\n" "$in_sample_file"
     cat "$in_sample_file"
+    
     echo
   elif [ $diff_exit_status -eq 1 ]; then
     printf "${red}\U25BC Fail: %s \U25BC \n${no_color}" "$in_sample_file"
+    
     printf "${blue}=== Sample Input Data ===\n${no_color}"
     cat "$in_sample_file"
+    
     printf "${blue}=== Expected Sample Output Data ===\n${no_color}"
     cat "$out_sample_file"
+    
     printf "${blue}=== Received Output Data ===\n${no_color}"
     cat my_out.txt
+    
     if [ "$SHOW_DIFF" -eq 1 ]; then
       printf "${blue}=== Output Data Difference ===\n${no_color}"
       tail -n +2 out_data_diff.txt
     fi
+    
     echo
   else
     printf "${orange}\U25BC Caution: %s \U25BC \n${no_color}" "$in_sample_file"
+    
     printf "${blue}=== Sample Input Data ===\n${no_color}"
     cat "$in_sample_file"
+    
     printf "${blue}=== Received Output Data ===\n${no_color}"
     cat my_out.txt
+    
     echo
   fi
 done
