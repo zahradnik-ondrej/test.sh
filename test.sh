@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEFAULT_COMPILE_ARGUMENTS="-Wall -g -fsanitize=address"
+DEFAULT_COMPILE_ARGUMENTS="-Wall -g -pedantic -fsanitize=address"
 CONTINUE_AFTER_TESTS=1
 
 #DEFAULT_COMPILE_ARGUMENTS="-Wall -Werror -g -fsanitize=address"
