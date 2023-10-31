@@ -28,76 +28,86 @@ no_color="\e[0;0m"
 
 #green="\e[0;32m"
 green_bold="\e[1;32m"
-#red="\e[0;31m"
-red_bold="\e[1;31m"
+#red="\e[0;35m"
+red_bold="\e[1;35m"
 blue="\e[0;34m"
 dark_gray="\e[0;90m"
 dark_gray_bold="\e[1;90m"
 orange="\e[1;37m"
 
-for in_sample_file in "${sample_dir_path}"*_in.txt; do
-	out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
+input_files=( "${sample_dir_path}"*_in.txt )
+if [ ! -e "${input_files[0]}" ]; then
+    printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
+else
+  for in_sample_file in "${sample_dir_path}"*_in.txt; do
+    out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
 
-	$program_path < "$in_sample_file" > my_out.txt
+    $program_path < "$in_sample_file" > my_out.txt
 
-	diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
-  diff_exit_status=$?
+    diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
+    diff_exit_status=$?
 
-  if [ $diff_exit_status -eq 0 ]; then
-    printf "${green_bold}\U25B6 OK:${no_color} %s${dark_gray}\n" "$in_sample_file"
-    cat "$in_sample_file"
+    if [ $diff_exit_status -eq 0 ]; then
+      printf "${green_bold}\U2714 OK:${no_color} %s${dark_gray}\n" "$in_sample_file"
+      cat "$in_sample_file"
 
-    echo
-  elif [ $diff_exit_status -eq 1 ]; then
-    printf "${red_bold}\U25BC Fail: %s \U25BC \n${no_color}" "$in_sample_file"
+      echo
+    elif [ $diff_exit_status -eq 1 ]; then
+      printf "${red_bold}\U25BC Fail: %s \U25BC \n${no_color}" "$in_sample_file"
 
-    printf "${blue}=== Sample Input Data ===\n${no_color}"
-    cat "$in_sample_file"
+      printf "${blue}=== Sample Input Data ===\n${no_color}"
+      cat "$in_sample_file"
 
-    printf "${blue}=== Expected Sample Output Data ===\n${no_color}"
-    cat "$out_sample_file"
+      printf "${blue}=== Expected Sample Output Data ===\n${no_color}"
+      cat "$out_sample_file"
 
-    printf "${blue}=== Received Output Data ===\n${no_color}"
-    cat my_out.txt
+      printf "${blue}=== Received Output Data ===\n${no_color}"
+      cat my_out.txt
 
-    # if [ "$SHOW_DIFF" -eq 1 ]; then
-    #   printf "${blue}=== Output Data Difference ===\n${no_color}"
-    #
-    #   tail -n +2 out_data_diff.txt
-    #
-    #   awk '
-    #   /^</ { print "\033[32m" $0 "\033[0m" }
-    #   /^>/ { print "\033[31m" $0 "\033[0m" }
-    #   /^---/ { print $0 }
-    #   ' out_data_diff.txt
-    #
-    # fi
+      # if [ "$SHOW_DIFF" -eq 1 ]; then
+      #   printf "${blue}=== Output Data Difference ===\n${no_color}"
+      #
+      #   tail -n +2 out_data_diff.txt
+      #
+      #   awk '
+      #   /^</ { print "\033[32m" $0 "\033[0m" }
+      #   /^>/ { print "\033[31m" $0 "\033[0m" }
+      #   /^---/ { print $0 }
+      #   ' out_data_diff.txt
+      #
+      # fi
 
-    echo
-  else
-    printf "${orange}\U25BC Caution: %s \U25BC \n${no_color}" "$in_sample_file"
+      echo
+    else
+      printf "${orange}\U25BC Caution: %s \U25BC \n${no_color}" "$in_sample_file"
 
-    printf "${blue}=== Sample Input Data ===\n${no_color}"
-    cat "$in_sample_file"
+      printf "${blue}=== Sample Input Data ===\n${no_color}"
+      cat "$in_sample_file"
 
-    printf "${blue}=== Received Output Data ===\n${no_color}"
-    cat my_out.txt
+      printf "${blue}=== Received Output Data ===\n${no_color}"
+      cat my_out.txt
 
-    echo
-  fi
-done
+      echo
+    fi
+  done
 
-rm my_out.txt out_data_diff.txt
+  rm my_out.txt out_data_diff.txt
+fi
 
 if [[ -n "$compile_output" ]]; then
-    echo "$compile_output"
+  echo "$compile_output"
 fi
 
 if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
   printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${no_color}"
 fi
 while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
-  $program_path
-  printf "${dark_gray}====== \n${no_color}"
+    $program_path
+    if [ $? -ne 0 ]; then
+      exit 1
+    else
+      printf "${dark_gray}====== \n${no_color}"
+    fi
 done
+
 
