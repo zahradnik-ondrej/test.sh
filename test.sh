@@ -106,7 +106,7 @@ while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
     if [ $? -ne 0 ]; then
       exit 1
     else
-      printf "${dark_gray}====== \n${no_color}"
+      printf "${dark_gray}======\n${no_color}"
     fi
 done
 
