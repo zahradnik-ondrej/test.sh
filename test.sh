@@ -102,8 +102,9 @@ if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
   printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${no_color}"
 fi
 while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
-    $program_path
-    if [ $? -ne 0 ]; then
+    output=$($program_path)
+    exit_code=$?
+    if [ $exit_code -ne 0 ] || [ -z "$output" ]; then
       exit 1
     else
       printf "${dark_gray}======\n${no_color}"
