@@ -3,7 +3,7 @@
 DEFAULT_COMPILE_ARGUMENTS="-Wall -g -pedantic -fsanitize=address"
 CONTINUE_AFTER_TESTS=1
 
-#DEFAULT_COMPILE_ARGUMENTS="-Wall -Werror -g -fsanitize=address"
+#DEFAULT_COMPILE_ARGUMENTS="-Wall -Werror -g -pedantic -fsanitize=address"
 #SHOW_DIFF=1
 
 relative_path=$(dirname "$1")
@@ -37,7 +37,6 @@ orange="\e[1;37m"
 
 input_files=( "${sample_dir_path}"*_in.txt )
 if [ -e "${input_files[0]}" ]; then
-  #printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
   for in_sample_file in "${sample_dir_path}"*_in.txt; do
     out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
 
@@ -100,6 +99,9 @@ fi
 output=$(timeout --preserve-status 1s "$program_path" 2>/dev/null)
 exit_code=$?
 if [ $exit_code -eq 143 ]; then
+  if [ ! -e "${input_files[0]}" ]; then
+    printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
+  fi
   if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
     printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${no_color}"
     while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
@@ -108,6 +110,15 @@ if [ $exit_code -eq 143 ]; then
     done
   fi
 else
-  $program_path
+  { $program_path; } 2>/dev/null
+
+  output=$($program_path 2>&1)
+  assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
+  if [[ -n "$assertion_error" ]]; then
+    printf "${red_bold}\U25BC Failed assertion: \U25BC \n${no_color}"
+    echo "$assertion_error"
+  else
+    printf "${green_bold}\U2714 OK${no_color}\n"
+  fi
 fi
 
