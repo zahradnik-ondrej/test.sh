@@ -19,8 +19,8 @@ if [[ "$1" == *.c || "$1" == *.cpp ]]; then
 
   return_code=$?
   if [ $return_code -ne 0 ]; then
-      echo "$compile_output"
-      exit 1
+    echo "$compile_output"
+    exit 1
   fi
 fi
 
@@ -36,9 +36,8 @@ dark_gray_bold="\e[1;90m"
 orange="\e[1;37m"
 
 input_files=( "${sample_dir_path}"*_in.txt )
-if [ ! -e "${input_files[0]}" ]; then
-    printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
-else
+if [ -e "${input_files[0]}" ]; then
+  #printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
   for in_sample_file in "${sample_dir_path}"*_in.txt; do
     out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
 
@@ -98,17 +97,17 @@ if [[ -n "$compile_output" ]]; then
   echo "$compile_output"
 fi
 
-if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
-  printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${no_color}"
+output=$(timeout --preserve-status 1s "$program_path" 2>/dev/null)
+exit_code=$?
+if [ $exit_code -eq 143 ]; then
+  if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
+    printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${no_color}"
+    while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
+        $program_path
+        printf "${dark_gray}======\n${no_color}"
+    done
+  fi
+else
+  $program_path
 fi
-while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
-    output=$($program_path)
-    exit_code=$?
-    if [ $exit_code -ne 0 ] || [ -z "$output" ]; then
-      exit 1
-    else
-      printf "${dark_gray}======\n${no_color}"
-    fi
-done
-
 
