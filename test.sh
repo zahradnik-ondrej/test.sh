@@ -1,21 +1,20 @@
 #!/bin/bash
 
-DEFAULT_COMPILE_ARGUMENTS="-Wall -g -pedantic -fsanitize=address"
+DEFAULT_COMPILE_ARGUMENTS="-Wall -g -pedantic -fsanitize=address" # -Werror
 CONTINUE_AFTER_TESTS=1
 
-#DEFAULT_COMPILE_ARGUMENTS="-Wall -Werror -g -pedantic -fsanitize=address"
 #SHOW_DIFF=1
 
 relative_path=$(dirname "$1")
-code_path="$1"
-program_name="$(basename "${code_path%.*}")"
+file_path="$1"
+program_name="$(basename "${file_path%.*}")"
 program_path="${relative_path}/${program_name}"
 sample_dir_path="${relative_path}/sample/CZE/"
 
-if [[ "$1" == *.c || "$1" == *.cpp ]]; then
+if [[ "$file_path" == *.c || "$file_path" == *.cpp ]]; then
   shift
 
-  compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}" "$code_path" "$@" 2>&1)
+  compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}" "$file_path" "$@" 2>&1)
 
   return_code=$?
   if [ $return_code -ne 0 ]; then
@@ -92,13 +91,28 @@ if [ -e "${input_files[0]}" ]; then
   rm my_out.txt out_data_diff.txt
 fi
 
-if [[ -n "$compile_output" ]]; then
-  echo "$compile_output"
+user_input=0
+if [[ "$file_path" == *.c || "$file_path" == *.cpp ]]; then
+  c_input_functions='scanf|fscanf|sscanf|vscanf|vfscanf|vsscanf|getchar|fgets|fgetc|getc|gets|read'
+  cpp_input_functions='std::cin|std::getline|std::istream::get|std::istream::getline|std::istream::read|std::istream::readsome'
+  if grep -q -E "$cpp_input_functions|$c_input_functions" "$file_path"; then
+      user_input=1
+  fi
+else
+  output=$(timeout --preserve-status 1s "$program_path" 2>/dev/null)
+  exit_code=$?
+  if [ $exit_code -eq 143 ]; then
+    user_input=1
+  fi
 fi
 
-output=$(timeout --preserve-status 1s "$program_path" 2>/dev/null)
-exit_code=$?
-if [ $exit_code -eq 143 ]; then
+if [ $user_input -eq 1 ]; then
+
+  if [[ -n "$compile_output" ]]; then
+    printf "${no_color}"
+    echo "$compile_output"
+  fi
+
   if [ ! -e "${input_files[0]}" ]; then
     printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
   fi
@@ -111,6 +125,10 @@ if [ $exit_code -eq 143 ]; then
   fi
 else
   { $program_path; } 2>/dev/null
+
+  if [[ -n "$compile_output" ]]; then
+    echo "$compile_output"
+  fi
 
   output=$($program_path 2>&1)
   assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
