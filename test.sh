@@ -116,7 +116,7 @@ if [ -e "${input_files[0]}" ]; then
     fi
   done
 
-  rm my_out.txt out_data_diff.txt
+  rm -f my_out.txt out_data_diff.txt
 fi
 
 user_input=0
@@ -166,22 +166,42 @@ if [ $user_input -eq 1 ]; then
     done
   fi
 else
-  { $program_path; } 2>/dev/null
+  # if the source code of the program is passed as the testing target
+  if [ $source_code -eq 1 ]; then
 
-  output=$($program_path 2>&1)
-  assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
-  # if the program terminated due to an assertion error
-  if [[ -n "$assertion_error" ]]; then
-    printf "${red_bold}\U25BC Failed assertion: \U25BC \n${no_color}"
-    echo "$assertion_error"
+    # fuj
+    # ?
+    assert_replacement_code='#include <stdio.h>\n#include <features.h>\n#define __RED "\\033[0;35m"\n#define __NONE "\\033[0m"\n#undef assert\nvoid custom_assert(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __RED "%s\\n" __NONE, assertion);\n}\n#define assert(expr) \\\n    ((expr) \\\n     ? __ASSERT_VOID_CAST (0) \\\n     : custom_assert (#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))'
+
+    new_file_path="${relative_path}/${program_name}_custom_assert.c"
+    cp "$file_path" "$new_file_path"
+
+    awk -v code="$assert_replacement_code" '/^int main/ {print code "\n" $0; next} {print}' "${new_file_path}" > tmp_file && mv tmp_file "${new_file_path}"
+
+    compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}_custom_assert" "$new_file_path" "$@" 2>&1)
+
+    program_path="${relative_path}/${program_name}_custom_assert"
+
+    $program_path
   else
-    printf "${green_bold}\U2714 OK${no_color}\n"
+    { $program_path; } 2>/dev/null
+
+    output=$($program_path 2>&1)
+    assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
+    # if the program terminated due to an assertion error
+    if [[ -n "$assertion_error" ]]; then
+      printf "${red_bold}\U25BC Failed assertion: \U25BC \n${no_color}"
+      echo "$assertion_error"
+    else
+      printf "${green_bold}\U2714 OK${no_color}\n"
+    fi
   fi
 fi
 
 # if the source code of the program is passed as the testing target
 if [ $source_code -eq 1 ]; then
-  rm "$program_path"
+  rm -f "$program_path"
+  rm -f "$new_file_path"
 fi
 
 # if there has been any output from the compiler
