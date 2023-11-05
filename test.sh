@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address" # -Werror
+DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address" # -Werror -Wno-unused-variable
 CONTINUE_AFTER_TESTS=1
 
 #SHOW_DIFF=1
@@ -139,4 +139,6 @@ else
     printf "${green_bold}\U2714 OK${no_color}\n"
   fi
 fi
+
+rm "$program_path"
 
