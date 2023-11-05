@@ -13,10 +13,9 @@
 
 DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address" # -Werror -Wno-unused-variable
 CONTINUE_AFTER_TESTS=1
+SHOW_DIFF=1
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
-
-#SHOW_DIFF=1
 
 relative_path=$(dirname "$1")
 file_path="$1"
@@ -24,13 +23,18 @@ program_name="$(basename "${file_path%.*}")"
 program_path="${relative_path}/${program_name}"
 sample_dir_path="${relative_path}/sample/CZE/"
 
+source_code=0
 if [[ "$file_path" == *.c || "$file_path" == *.cpp ]]; then
+  source_code=1
+fi
+
+if [ $source_code -eq 1 ]; then
   shift
 
   compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}" "$file_path" "$@" 2>&1)
 
-  return_code=$?
-  if [ $return_code -ne 0 ]; then
+  exit_code=$?
+  if [ $exit_code -ne 0 ]; then
     echo "$compile_output"
     exit 1
   fi
@@ -74,8 +78,10 @@ if [ -e "${input_files[0]}" ]; then
       printf "${blue}=== Received Output Data ===\n${no_color}"
       cat my_out.txt
 
-      # if [ "$SHOW_DIFF" -eq 1 ]; then
-      #   printf "${blue}=== Output Data Difference ===\n${no_color}"
+      if [ "$SHOW_DIFF" -eq 1 ]; then
+        printf "${blue}=== Output Data Difference ===\n${no_color}"
+
+        cat out_data_diff.txt
       #
       #   tail -n +2 out_data_diff.txt
       #
@@ -85,7 +91,7 @@ if [ -e "${input_files[0]}" ]; then
       #   /^---/ { print $0 }
       #   ' out_data_diff.txt
       #
-      # fi
+      fi
 
       echo
     else
@@ -105,7 +111,7 @@ if [ -e "${input_files[0]}" ]; then
 fi
 
 user_input=0
-if [[ "$file_path" == *.c || "$file_path" == *.cpp ]]; then
+if [ $source_code -eq 1 ]; then
   c_input_functions='scanf|fscanf|sscanf|vscanf|vfscanf|vsscanf|getchar|fgets|fgetc|getc|gets|read'
   cpp_input_functions='std::cin|std::getline|std::istream::get|std::istream::getline|std::istream::read|std::istream::readsome'
   if grep -q -E "$cpp_input_functions|$c_input_functions" "$file_path"; then
@@ -153,5 +159,7 @@ else
   fi
 fi
 
-rm "$program_path"
+if [ $source_code -eq 1 ]; then
+  rm "$program_path"
+fi
 
