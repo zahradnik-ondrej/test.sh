@@ -1,7 +1,20 @@
 #!/bin/bash
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                        _            _         _                             #
+#                       | |_ ___  ___| |_   ___| |__                          #
+#                       | __/ _ \/ __| __| / __| '_ \                         #
+#                       | ||  __/\__ \ |_ _\__ \ | | |                        #
+#                        \__\___||___/\__(_)___/_| |_|                        #
+#                                                                             #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
+#             An overengineered testing script for C/C++ programs.            #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address" # -Werror -Wno-unused-variable
 CONTINUE_AFTER_TESTS=1
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
 
 #SHOW_DIFF=1
 
