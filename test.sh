@@ -168,9 +168,6 @@ if [ $user_input -eq 1 ]; then
 else
   # if the source code of the program is passed as the testing target
   if [ $source_code -eq 1 ]; then
-
-    # fuj
-    # ?
     assert_replacement_code='#include <stdio.h>\n#include <features.h>\n#define __RED "\\033[0;35m"\n#define __NONE "\\033[0m"\n#undef assert\nvoid custom_assert(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __RED "%s\\n" __NONE, assertion);\n}\n#define assert(expr) \\\n    ((expr) \\\n     ? __ASSERT_VOID_CAST (0) \\\n     : custom_assert (#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))'
 
     assert_replacement_code='#include <stdio.h>\n#define __RED "\\033[1;35m"\n#define __GREEN "\\033[1;32m"\n#define __GRAY "\\033[0;90m"\n#define __NONE "\\033[0m"\n#undef assert\nvoid custom_assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __RED "\\u25bc Assertion failed: \\u25bc\\n" __NONE "%s\\n\\n", assertion);\n}\nvoid custom_assert_pass(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __GREEN "\\u2714 OK:\\n" __GRAY "%s\\n\\n" __NONE, assertion);\n}\n#define assert(expr) \\\n    ((expr) \\\n     ? custom_assert_pass(#expr, __FILE__, __LINE__, __ASSERT_FUNCTION) \\\n     : custom_assert_fail(#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))'
