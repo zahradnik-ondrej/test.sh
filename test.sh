@@ -11,11 +11,79 @@
 #             An overengineered testing script for C/C++ programs.            #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address" # -Werror -Wno-unused-variable
-CONTINUE_AFTER_TESTS=1
+DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address"
 SHOW_DIFF=1
+CONTINUE_AFTER_TESTS=1
+CONTINUE_AFTER_ASSERT_FAIL=1
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
+
+reset="\e[0;0m"
+
+#green="\e[0;32m"
+green_bold="\e[1;32m"
+#red="\e[0;35m"
+red_bold="\e[1;35m"
+blue="\e[0;34m"
+dark_gray="\e[0;90m"
+dark_gray_bold="\e[1;90m"
+orange="\e[1;37m"
+purple="\e[0;34m"
+pink="\e[0;31m"
+pink_bold="\e[1;31m"
+yellow="\e[1;33m"
+
+show_help() {
+  printf "${pink_bold}"
+  printf "                        _            _         _                             \n"
+  printf "                       | |_ ___  ___| |_   ___| |__                          \n"
+  printf "                       | __/ _ \/ __| __| / __| '_ \                         \n"
+  printf "                       | ||  __/\__ \ |_ _\__ \ | | |                        \n"
+  printf "                        \__\___||___/\__(_)___/_| |_|                        \n"
+  printf "${reset}"
+  echo
+  printf "${pink}"
+  printf " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - \n"
+  printf "              An overengineered testing script for C/C++ programs.           \n"
+  printf "${reset}"
+  echo
+  printf "${green_bold}Usage:${reset} ${yellow} ${0} [options] <program_path/code_path> <additional_compile_arguments>\n"
+  echo
+  printf "${green_bold}Options:${reset}\n"
+  printf "  ${purple}-h, --help                        ${reset}Show this help message and exit.\n"
+  echo
+  printf "${green_bold}Arguments:${reset}\n"
+  printf "  ${purple}<program_path/code_path>          ${reset}The path to the C/C++ program or the source code file.\n"
+  echo
+  printf "  ${purple}<additional_compile_arguments>    ${reset}Additional arguments to pass to the compiler.\n"
+  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n"
+  echo
+  printf "${green_bold}Variables:${reset}\n"
+  printf "  ${purple}DEFAULT_COMPILE_ARGUMENTS         ${reset}The default arguments passed to the compiler if the source code is provided instead of a compiled program.\n"
+  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n"
+  echo
+  printf "  ${purple}SHOW_DIFF                         ${reset}Show the difference between the sample output files and the program's actual output.\n"
+  echo
+  printf "  ${purple}CONTINUE_AFTER_TESTS              ${reset}Continue to run the program indefinitely on repeat after the sample tests to allow for manual testing of user inputs.\n"
+  echo
+  printf "  ${purple}CONTINUE_AFTER_ASSERT_FAIL        ${reset}Force the assert macro to NOT terminate the program after an assertion failure to see all passed/failed assertions.\n"
+  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n"
+  echo
+  #printf "${green_bold}Examples:${reset}\n"
+  #echo
+}
+
+# if no command line arguments have been passed
+if [ "$#" -eq 0 ]; then
+  show_help
+  exit 1
+fi
+
+# if the argument `-h` or `--help` have been passed into the script
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  show_help
+  exit 0
+fi
 
 relative_path=$(dirname "$1")
 file_path="$1"
@@ -43,20 +111,23 @@ if [ $source_code -eq 1 ]; then
   fi
 fi
 
-no_color="\e[0;0m"
-
-#green="\e[0;32m"
-green_bold="\e[1;32m"
-#red="\e[0;35m"
-red_bold="\e[1;35m"
-blue="\e[0;34m"
-dark_gray="\e[0;90m"
-dark_gray_bold="\e[1;90m"
-orange="\e[1;37m"
-
 input_files=( "${sample_dir_path}"*_in.txt )
-# if ANY sample input files have been provided
+# if at least one sample input file has been provided
 if [ -e "${input_files[0]}" ]; then
+  input_files=1
+else
+  input_files=0
+fi
+
+output_files=( "${sample_dir_path}"*_out.txt )
+# if at least one sample output file has been provided
+if [ -e "${output_files[0]}" ]; then
+  output_files=1
+else
+  output_files=0
+fi
+
+if [ $input_files -eq 1 ]; then
   # for every sample input file
   for in_sample_file in "${sample_dir_path}"*_in.txt; do
     out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
@@ -68,25 +139,25 @@ if [ -e "${input_files[0]}" ]; then
 
     # if the diff command returned NO difference in the compared files
     if [ $diff_exit_status -eq 0 ]; then
-      printf "${green_bold}\U2714 OK:${no_color} %s${dark_gray}\n" "$in_sample_file"
+      printf "${green_bold}\U2714 OK:${reset} %s${dark_gray}\n" "$in_sample_file"
       cat "$in_sample_file"
 
       echo
     # if the diff command returned SOME difference in the compared files
     elif [ $diff_exit_status -eq 1 ]; then
-      printf "${red_bold}\U25BC Fail: %s \U25BC \n${no_color}" "$in_sample_file"
+      printf "${red_bold}\U25BC Fail: %s \U25BC \n${reset}" "$in_sample_file"
 
-      printf "${blue}=== Sample Input Data ===\n${no_color}"
+      printf "${blue}=== Sample Input Data ===\n${reset}"
       cat "$in_sample_file"
 
-      printf "${blue}=== Expected Sample Output Data ===\n${no_color}"
+      printf "${blue}=== Expected Sample Output Data ===\n${reset}"
       cat "$out_sample_file"
 
-      printf "${blue}=== Received Output Data ===\n${no_color}"
+      printf "${blue}=== Received Output Data ===\n${reset}"
       cat my_out.txt
 
       if [ "$SHOW_DIFF" -eq 1 ]; then
-        printf "${blue}=== Output Data Difference ===\n${no_color}"
+        printf "${blue}=== Output Data Difference ===\n${reset}"
 
         cat out_data_diff.txt
 
@@ -104,19 +175,17 @@ if [ -e "${input_files[0]}" ]; then
     # if the diff command exited with an error code
     # (i.e. no sample output file has been provided)
     else
-      printf "${orange}\U25BC Caution: %s \U25BC \n${no_color}" "$in_sample_file"
+      printf "${orange}\U25BC Caution: %s \U25BC \n${reset}" "$in_sample_file"
 
-      printf "${blue}=== Sample Input Data ===\n${no_color}"
+      printf "${blue}=== Sample Input Data ===\n${reset}"
       cat "$in_sample_file"
 
-      printf "${blue}=== Received Output Data ===\n${no_color}"
+      printf "${blue}=== Received Output Data ===\n${reset}"
       cat my_out.txt
 
       echo
     fi
   done
-
-  rm -f my_out.txt out_data_diff.txt
 fi
 
 user_input=0
@@ -152,55 +221,92 @@ if [ $user_input -eq 1 ]; then
     exit 0
   fi
 
-  # if NO sample input files have been provided
-  if [ ! -e "${input_files[0]}" ]; then
-    printf "${red_bold}\U26A0 Warning:${no_color} No sample input data found in %s\n\n" "${sample_dir_path}"
+  if [ $input_files -eq 0 ]; then
+    printf "${red_bold}\U26A0 Warning:${reset} No sample input data found in %s\n\n" "${sample_dir_path}"
   fi
   if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
-    printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${no_color}"
+    printf "${dark_gray_bold}\U25BC Manual input: \U25BC \n${reset}"
     # run the program indefinitely on repeat
     # (to allow for manually testing user inputs)
     while [ $CONTINUE_AFTER_TESTS -eq 1 ]; do
         $program_path
-        printf "${dark_gray}======\n${no_color}"
+        printf "${dark_gray}======\n${reset}"
     done
   fi
 else
-  # if the source code of the program is passed as the testing target
-  if [ $source_code -eq 1 ]; then
-    assert_replacement_code='#include <stdio.h>\n#include <features.h>\n#define __RED "\\033[0;35m"\n#define __NONE "\\033[0m"\n#undef assert\nvoid custom_assert(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __RED "%s\\n" __NONE, assertion);\n}\n#define assert(expr) \\\n    ((expr) \\\n     ? __ASSERT_VOID_CAST (0) \\\n     : custom_assert (#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))'
+  if [ $output_files -eq 1 ]; then
+    out_sample_file=$(ls ${sample_dir_path}*_out.txt 2> /dev/null | head -n 1)
 
-    assert_replacement_code='#include <stdio.h>\n#define __RED "\\033[1;35m"\n#define __GREEN "\\033[1;32m"\n#define __GRAY "\\033[0;90m"\n#define __NONE "\\033[0m"\n#undef assert\nvoid custom_assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __RED "\\u25bc Assertion failed: \\u25bc\\n" __NONE "%s\\n\\n", assertion);\n}\nvoid custom_assert_pass(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __GREEN "\\u2714 OK:\\n" __GRAY "%s\\n\\n" __NONE, assertion);\n}\n#define assert(expr) \\\n    ((expr) \\\n     ? custom_assert_pass(#expr, __FILE__, __LINE__, __ASSERT_FUNCTION) \\\n     : custom_assert_fail(#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))'
+    $program_path > my_out.txt
 
-    new_file_path="${relative_path}/${program_name}_custom_assert.c"
-    cp "$file_path" "$new_file_path"
+    diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
+    diff_exit_status=$?
 
-    awk -v code="$assert_replacement_code" '/^int main/ {print code "\n" $0; next} {print}' "${new_file_path}" > tmp_file && mv tmp_file "${new_file_path}"
+    # if the diff command returned NO difference in the compared files
+    if [ $diff_exit_status -eq 0 ]; then
+      printf "${green_bold}\U2714 OK:${reset} %s${dark_gray}\n" "$out_sample_file"
+      cat "$out_sample_file"
+    # if the diff command returned SOME difference in the compared files
+    elif [ $diff_exit_status -eq 1 ]; then
+      printf "${red_bold}\U25BC Fail: \U25BC \n${reset}"
 
-    compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}_custom_assert" "$new_file_path" "$@" 2>&1)
+      printf "${blue}=== Expected Sample Output Data ===\n${reset}"
+      cat "$out_sample_file"
 
-    program_path="${relative_path}/${program_name}_custom_assert"
+      printf "${blue}=== Received Output Data ===\n${reset}"
+      cat my_out.txt
 
-    $program_path
+      if [ "$SHOW_DIFF" -eq 1 ]; then
+        printf "${blue}=== Output Data Difference ===\n${reset}"
+
+        cat out_data_diff.txt
+
+        # tail -n +2 out_data_diff.txt
+
+        # awk '
+        # /^</ { print "\033[32m" $0 "\033[0m" }
+        # /^>/ { print "\033[31m" $0 "\033[0m" }
+        # /^---/ { print $0 }
+        # ' out_data_diff.txt
+
+      fi
+    fi
   else
-    { $program_path; } 2>/dev/null
+    # if the source code of the program is passed as the testing target
+    if [[ "$source_code" == 1 && "$CONTINUE_AFTER_ASSERT_FAIL" == 1 ]]; then
+      assert_replacement_code='#include <stdio.h>\n#define __RED "\\033[1;35m"\n#define __GREEN "\\033[1;32m"\n#define __GRAY "\\033[0;90m"\n#define __NONE "\\033[0m"\n#undef assert\nvoid custom_assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __RED "\\u25bc Assertion failed: \\u25bc\\n" __NONE "%s\\n\\n", assertion);\n}\nvoid custom_assert_pass(const char* assertion, const char* file, unsigned int line, const char* function) {\n    fprintf(stderr, __GREEN "\\u2714 OK: " __GRAY "%s\\n\\n" __NONE, assertion);\n}\n#define assert(expr) \\\n    ((expr) \\\n     ? custom_assert_pass(#expr, __FILE__, __LINE__, __ASSERT_FUNCTION) \\\n     : custom_assert_fail(#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))'
 
-    output=$($program_path 2>&1)
-    assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
-    # if the program terminated due to an assertion error
-    if [[ -n "$assertion_error" ]]; then
-      printf "${red_bold}\U25BC Failed assertion: \U25BC \n${no_color}"
-      echo "$assertion_error"
+      new_file_path="${relative_path}/${program_name}_custom_assert.c"
+      cp "$file_path" "$new_file_path"
+
+      awk -v code="$assert_replacement_code" '/^int main/ {print code "\n" $0; next} {print}' "${new_file_path}" > tmp_file && mv tmp_file "${new_file_path}"
+
+      compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}_custom_assert" "$new_file_path" "$@" 2>&1)
+
+      new_program_path="${relative_path}/${program_name}_custom_assert"
+
+      $new_program_path
     else
-      printf "${green_bold}\U2714 OK${no_color}\n"
+      { $program_path; } 2>/dev/null
+
+      output=$($program_path 2>&1)
+      assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
+      # if the program terminated due to an assertion error
+      if [[ -n "$assertion_error" ]]; then
+        printf "${red_bold}\U25BC Failed assertion: \U25BC \n${reset}"
+        echo "$assertion_error"
+      else
+        printf "${green_bold}\U2714 OK${reset}\n"
+      fi
     fi
   fi
 fi
 
+rm -f my_out.txt out_data_diff.txt
+
 # if the source code of the program is passed as the testing target
 if [ $source_code -eq 1 ]; then
-  rm -f "$program_path"
-  rm -f "$new_file_path"
+  rm -f "$program_path" "$new_file_path" "$new_program_path"
 fi
 
 # if there has been any output from the compiler
