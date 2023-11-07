@@ -185,6 +185,8 @@ if [ $input_files -eq 1 ]; then
 
       echo
     fi
+
+    rm -f my_out.txt out_data_diff.txt
   done
 fi
 
@@ -271,6 +273,8 @@ else
 
       fi
     fi
+
+    rm -f my_out.txt out_data_diff.txt
   else
     # if the source code of the program is passed as the testing target
     if [[ "$source_code" == 1 && "$CONTINUE_AFTER_ASSERT_FAIL" == 1 ]]; then
@@ -301,8 +305,6 @@ else
     fi
   fi
 fi
-
-rm -f my_out.txt out_data_diff.txt
 
 # if the source code of the program is passed as the testing target
 if [ $source_code -eq 1 ]; then
