@@ -15,6 +15,7 @@ DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address"
 SHOW_DIFF=1
 CONTINUE_AFTER_TESTS=1
 CONTINUE_AFTER_ASSERT_FAIL=1
+SAMPLE_DIR_PATH="/sample/CZE/"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
 
@@ -32,6 +33,19 @@ purple="\e[0;34m"
 pink="\e[0;31m"
 pink_bold="\e[1;31m"
 yellow="\e[1;33m"
+
+wrap_text() {
+  local indent_size=$1
+  local max_width=100
+  local text_width=$((max_width - indent_size))
+  local indent=$(printf "%*s" $indent_size "")
+
+  shift
+
+  while IFS= read -r line; do
+    echo "$line" | fold -s -w $text_width | sed "1!s/^/${indent}/"
+  done
+}
 
 show_help() {
   printf "${pink_bold}"
@@ -56,19 +70,20 @@ show_help() {
   printf "  ${purple}<program_path/code_path>          ${reset}The path to the C/C++ program or the source code file.\n"
   echo
   printf "  ${purple}<additional_compile_arguments>    ${reset}Additional arguments to pass to the compiler.\n"
-  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n"
+  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n" | wrap_text 36
   echo
   printf "${green_bold}Variables:${reset}\n"
-  printf "  ${purple}DEFAULT_COMPILE_ARGUMENTS         ${reset}The default arguments passed to the compiler if the source code is provided instead of a compiled program.\n"
-  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n"
+  printf "  ${purple}DEFAULT_COMPILE_ARGUMENTS         ${reset}The default arguments passed to the compiler.\n"
+  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n" | wrap_text 36
   echo
-  printf "  ${purple}SHOW_DIFF                         ${reset}Show the difference between the sample output files and the program's actual output.\n"
+  printf "  ${purple}SHOW_DIFF                         ${reset}Show the difference between the sample output files and the program's actual output.\n" | wrap_text 36
   echo
-  printf "  ${purple}CONTINUE_AFTER_TESTS              ${reset}Continue to run the program indefinitely on repeat after the sample tests to allow for manual testing of user inputs.\n"
+  printf "  ${purple}CONTINUE_AFTER_TESTS              ${reset}Continue to run the program indefinitely on repeat after the sample tests to allow for manual testing of user inputs.\n" | wrap_text 36
   echo
-  printf "  ${purple}CONTINUE_AFTER_ASSERT_FAIL        ${reset}Force the assert macro to NOT terminate the program after an assertion failure to see all passed/failed assertions.\n"
-  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n"
+  printf "  ${purple}CONTINUE_AFTER_ASSERT_FAIL        ${reset}Force the assert macro NOT to terminate the program after an assertion failure to see all passed/failed assertions.\n" | wrap_text 36
+  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n" | wrap_text 36
   echo
+  printf "  ${purple}SAMPLE_DIR_PATH${reset}\n"
   #printf "${green_bold}Examples:${reset}\n"
   #echo
 }
@@ -89,7 +104,7 @@ relative_path=$(dirname "$1")
 file_path="$1"
 program_name="$(basename "${file_path%.*}")"
 program_path="${relative_path}/${program_name}"
-sample_dir_path="${relative_path}/sample/CZE/"
+sample_dir_path="${relative_path}/${SAMPLE_DIR_PATH}"
 
 source_code=0
 # if the source code of the program is passed as the testing target
