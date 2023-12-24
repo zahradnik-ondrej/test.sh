@@ -11,19 +11,25 @@
 #             An overengineered testing script for C/C++ programs.            #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g -fsanitize=address"
-SHOW_DIFF=1
+DEFAULT_COMPILE_ARGUMENTS="-Wall -pedantic -g" # -Werror -Wno-unused-variable -O
+ADDRESS_SANITIZER=1
+
+TIMEOUT=1
+
+RUN_SAMPLE_TESTS=1
+SHOW_DIFF=0
 CONTINUE_AFTER_TESTS=1
-CONTINUE_AFTER_ASSERT_FAIL=1
 SAMPLE_DIR_PATH="/sample/CZE/"
+
+CONTINUE_AFTER_ASSERT_FAIL=1
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
 
 reset="\e[0;0m"
 
-#green="\e[0;32m"
+green="\e[0;32m"
 green_bold="\e[1;32m"
-#red="\e[0;35m"
+red="\e[0;35m"
 red_bold="\e[1;35m"
 blue="\e[0;34m"
 dark_gray="\e[0;90m"
@@ -34,56 +40,109 @@ pink="\e[0;31m"
 pink_bold="\e[1;31m"
 yellow="\e[1;33m"
 
-wrap_text() {
-  local indent_size=$1
-  local max_width=100
-  local text_width=$((max_width - indent_size))
-  local indent=$(printf "%*s" $indent_size "")
+printc() {
+  indentation="$1"
+  width="$2"
+  spacing="$3"
 
-  shift
+  shift 3
 
-  while IFS= read -r line; do
-    echo "$line" | fold -s -w $text_width | sed "1!s/^/${indent}/"
+  columns=()
+  column_num=0
+  row_max=0
+  for string in "$@"; do
+    words=($string)
+
+    column=""
+    row_len=0
+    row_num=1
+    for word in "${words[@]}"; do
+      if [ ${#column} -eq 0 ]; then
+        spaces=""
+        if [ $column_num -eq 0 ]; then
+          spaces=$(printf '%*s' "$indentation" "")
+        fi
+        column="$spaces$word"
+        row_len=${#column}
+      elif [ $((row_len + ${#word} + 1)) -le "$width" ]; then
+        column="$column $word"
+        row_len=$((row_len + ${#word} + 1))
+      else
+        spaces=""
+        if [ $column_num -eq 0 ]; then
+          spaces=$(printf '%*s' "$indentation" "")
+        fi
+        column="$column\n$spaces$word"
+        ((row_num += 1))
+        if [ "$row_num" -gt "$row_max" ]; then
+          row_max="$row_num"
+        fi
+        row_len=${#word}
+      fi
+    done
+
+    column="$column\n"
+    columns+=("$column")
+    ((column_num += 1))
+  done
+
+  for ((row = 0; row <= row_max; row++)); do
+    prev_row_text=""
+    row_text=""
+    for ((column = 1; column <= "${#columns[@]}"; column++)); do
+      position=$((indentation + (width + spacing) * (column - 1)))
+      offset=$(( position - ${#prev_row_text} ))
+      row_text=$(echo -e "${columns[$((column - 1))]}" | sed -n "$((row + 1))p")
+      spaces=""
+      if [ "$column" -ne 1 ]; then
+        spaces=$(printf '%*s' "$offset" "")
+      fi
+      row_text="$spaces$row_text"
+      printf "$row_text"
+      prev_row_text=$(echo -n "$prev_row_text$row_text" | sed 's/\x1b\[[0-9;]*m//g')
+    done
+    echo
   done
 }
 
 show_help() {
   printf "${pink_bold}"
-  printf "                        _            _         _                             \n"
-  printf "                       | |_ ___  ___| |_   ___| |__                          \n"
-  printf "                       | __/ _ \/ __| __| / __| '_ \                         \n"
-  printf "                       | ||  __/\__ \ |_ _\__ \ | | |                        \n"
-  printf "                        \__\___||___/\__(_)___/_| |_|                        \n"
+  printf "                        _            _         _      \n"
+  printf "                       | |_ ___  ___| |_   ___| |__   \n"
+  printf "                       | __/ _ \/ __| __| / __| '_ \  \n"
+  printf "                       | ||  __/\__ \ |_ _\__ \ | | | \n"
+  printf "                        \__\___||___/\__(_)___/_| |_| \n"
   printf "${reset}"
   echo
   printf "${pink}"
-  printf " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - \n"
-  printf "              An overengineered testing script for C/C++ programs.           \n"
+  printc 1 100 0 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+  printc 14 100 0 "An overengineered testing script for C/C++ programs."
   printf "${reset}"
   echo
-  printf "${green_bold}Usage:${reset} ${yellow} ${0} [options] <program_path/code_path> <additional_compile_arguments>\n"
+  printc 0 100 0 "${green_bold}Usage: ${yellow} ${0} [options] <program_path/code_path> <additional_compile_arguments>"
   echo
-  printf "${green_bold}Options:${reset}\n"
-  printf "  ${purple}-h, --help                        ${reset}Show this help message and exit.\n"
+  printc 0 50 0 "${green_bold}Options:${reset}"
+  printc 2 50 0 "${purple}-h, --help${reset}" "Show this help message and exit."
   echo
-  printf "${green_bold}Arguments:${reset}\n"
-  printf "  ${purple}<program_path/code_path>          ${reset}The path to the C/C++ program or the source code file.\n"
+  printc 0 50 0 "${green_bold}Arguments:${reset}"
+  printc 2 50 0 "${purple}<program_path/code_path>${reset}" "The path to the C/C++ program or the source code file."
   echo
-  printf "  ${purple}<additional_compile_arguments>    ${reset}Additional arguments to pass to the compiler.\n"
-  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n" | wrap_text 36
+  printc 2 50 0 "${purple}<additional_compile_arguments>${reset}" "Additional arguments to pass to the compiler."
+  printc 52 100 0 "${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}"
   echo
-  printf "${green_bold}Variables:${reset}\n"
-  printf "  ${purple}DEFAULT_COMPILE_ARGUMENTS         ${reset}The default arguments passed to the compiler.\n"
-  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n" | wrap_text 36
+  printc 0 50 0 "${green_bold}Variables:${reset}"
+  printc 2 50 0 "${purple}DEFAULT_COMPILE_ARGUMENTS${reset}" "The default arguments passed to the compiler."
+  printc 52 100 0 "${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}"
   echo
-  printf "  ${purple}SHOW_DIFF                         ${reset}Show the difference between the sample output files and the program's actual output.\n" | wrap_text 36
+  printc 2 50 0 "${purple}SHOW_DIFF${reset}" "Show the difference between the sample output files and the program's actual output."
   echo
-  printf "  ${purple}CONTINUE_AFTER_TESTS              ${reset}Continue to run the program indefinitely on repeat after the sample tests to allow for manual testing of user inputs.\n" | wrap_text 36
+  printc 2 50 0 "${purple}CONTINUE_AFTER_TESTS${reset}" "Continue to run the program indefinitely on repeat after the sample tests to allow for manual testing of user inputs."
   echo
-  printf "  ${purple}CONTINUE_AFTER_ASSERT_FAIL        ${reset}Force the assert macro NOT to terminate the program after an assertion failure to see all passed/failed assertions.\n" | wrap_text 36
-  printf "                                    ${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}\n" | wrap_text 36
+  printc 2 50 0 "${purple}CONTINUE_AFTER_ASSERT_FAIL${reset}" "Force the assert macro NOT to terminate the program after an assertion failure to see all ${green}passed${reset}/${red}failed${reset} assertions."
+  printc 52 100 0 "${dark_gray}(only works when the source code is provided instead of an already compiled program)${reset}"
   echo
-  printf "  ${purple}SAMPLE_DIR_PATH${reset}\n"
+  printc 2 50 0 "${purple}SAMPLE_DIR_PATH${reset}"
+  #echo
   #printf "${green_bold}Examples:${reset}\n"
   #echo
 }
@@ -116,6 +175,10 @@ fi
 if [ $source_code -eq 1 ]; then
   shift
 
+  if [ "$ADDRESS_SANITIZER" -eq 1 ]; then
+      DEFAULT_COMPILE_ARGUMENTS+=" -fsanitize=address"
+  fi
+
   compile_output=$(g++ -fdiagnostics-color=always $DEFAULT_COMPILE_ARGUMENTS -o "${relative_path}/${program_name}" "$file_path" "$@" 2>&1)
 
   exit_code=$?
@@ -126,83 +189,119 @@ if [ $source_code -eq 1 ]; then
   fi
 fi
 
-input_files=( "${sample_dir_path}"*_in.txt )
-# if at least one sample input file has been provided
-if [ -e "${input_files[0]}" ]; then
-  input_files=1
-else
-  input_files=0
+if [[ $TIMEOUT == *[0-9] ]]; then
+  TIMEOUT=${TIMEOUT}s
 fi
 
-output_files=( "${sample_dir_path}"*_out.txt )
-# if at least one sample output file has been provided
-if [ -e "${output_files[0]}" ]; then
-  output_files=1
-else
-  output_files=0
-fi
+if [ "$RUN_SAMPLE_TESTS" -eq 1 ]; then
 
-if [ $input_files -eq 1 ]; then
-  # for every sample input file
-  for in_sample_file in "${sample_dir_path}"*_in.txt; do
-    out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
+  input_files=( "${sample_dir_path}"*_in.txt )
+  # if at least one sample input file has been provided
+  if [ -e "${input_files[0]}" ]; then
+    input_files=1
+  else
+    input_files=0
+  fi
 
-    $program_path < "$in_sample_file" > my_out.txt
+  output_files=( "${sample_dir_path}"*_out.txt )
+  # if at least one sample output file has been provided
+  if [ -e "${output_files[0]}" ]; then
+    output_files=1
+  else
+    output_files=0
+  fi
 
-    diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
-    diff_exit_status=$?
+  if [ $input_files -eq 1 ]; then
+    # for every sample input file
+    for in_sample_file in "${sample_dir_path}"*_in.txt; do
+      out_sample_file=$(echo -n "$in_sample_file" | sed -e "s/_in\(.*\)$/_out\1/")
 
-    # if the diff command returned NO difference in the compared files
-    if [ $diff_exit_status -eq 0 ]; then
-      printf "${green_bold}\U2714 OK:${reset} %s${dark_gray}\n" "$in_sample_file"
-      cat "$in_sample_file"
+      timeout $TIMEOUT $program_path < "$in_sample_file" > my_out.txt
 
-      echo
-    # if the diff command returned SOME difference in the compared files
-    elif [ $diff_exit_status -eq 1 ]; then
-      printf "${red_bold}\U25BC Fail: %s \U25BC \n${reset}" "$in_sample_file"
+      exit_code=$?
+      if [ $exit_code -eq 124 ]; then
+        printf "${red_bold}\U25BC Fail: %s: The program was terminated due to ${TIMEOUT} timeout. \U25BC \n${reset}" "$in_sample_file"
+        printf "${blue}=== Sample Input Data ===\n${reset}"
+        cat "$in_sample_file"
+        echo
 
-      printf "${blue}=== Sample Input Data ===\n${reset}"
-      cat "$in_sample_file"
-
-      printf "${blue}=== Expected Sample Output Data ===\n${reset}"
-      cat "$out_sample_file"
-
-      printf "${blue}=== Received Output Data ===\n${reset}"
-      cat my_out.txt
-
-      if [ "$SHOW_DIFF" -eq 1 ]; then
-        printf "${blue}=== Output Data Difference ===\n${reset}"
-
-        cat out_data_diff.txt
-
-        # tail -n +2 out_data_diff.txt
-
-        # awk '
-        # /^</ { print "\033[32m" $0 "\033[0m" }
-        # /^>/ { print "\033[31m" $0 "\033[0m" }
-        # /^---/ { print $0 }
-        # ' out_data_diff.txt
-
+        continue
       fi
 
-      echo
-    # if the diff command exited with an error code
-    # (i.e. no sample output file has been provided)
-    else
-      printf "${orange}\U25BC Caution: %s \U25BC \n${reset}" "$in_sample_file"
+      if [ ! -s my_out.txt ]; then
+          output=0
+      else
+          output=1
+      fi
 
-      printf "${blue}=== Sample Input Data ===\n${reset}"
-      cat "$in_sample_file"
+      diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
+      diff_exit_status=$?
 
-      printf "${blue}=== Received Output Data ===\n${reset}"
-      cat my_out.txt
+      # if the diff command returned NO difference in the compared files
+      if [ $diff_exit_status -eq 0 ]; then
+        printf "${green_bold}\U2714 OK:${reset} %s${dark_gray}\n" "$in_sample_file"
+        cat "$in_sample_file"
 
-      echo
-    fi
+        echo
+      # if the diff command returned SOME difference in the compared files
+      elif [ $diff_exit_status -eq 1 ]; then
 
-    rm -f my_out.txt out_data_diff.txt
-  done
+        if [ $output -eq 1 ]; then
+            printf "${red_bold}\U25BC Fail: %s \U25BC \n${reset}" "$in_sample_file"
+        else
+            printf "${red_bold}\U25BC Fail: %s: The program did not produce any output data. \U25BC \n${reset}" "$in_sample_file"
+        fi
+
+        printf "${blue}=== Sample Input Data ===\n${reset}"
+        cat "$in_sample_file"
+
+        printf "${blue}=== Expected Sample Output Data ===\n${reset}"
+        cat "$out_sample_file"
+
+        if [ $output -eq 1 ]; then
+          printf "${blue}=== Received Output Data ===\n${reset}"
+          cat my_out.txt
+
+          if [ "$SHOW_DIFF" -eq 1 ]; then
+            printf "${blue}=== Output Data Difference ===\n${reset}"
+
+            cat out_data_diff.txt
+
+            # tail -n +2 out_data_diff.txt
+
+            # awk '
+            # /^</ { print "\033[32m" $0 "\033[0m" }
+            # /^>/ { print "\033[31m" $0 "\033[0m" }
+            # /^---/ { print $0 }
+            # ' out_data_diff.txt
+
+          fi
+        fi
+
+        echo
+      # if the diff command exited with an error code
+      # (i.e. no sample output file has been provided)
+      else
+        if [ $output -eq 1 ]; then
+            printf "${orange}\U25BC Caution: %s \U25BC \n${reset}" "$in_sample_file"
+        else
+            printf "${orange}\U25BC Caution: %s: The program did not produce any output data. \U25BC \n${reset}" "$in_sample_file"
+        fi
+
+        printf "${blue}=== Sample Input Data ===\n${reset}"
+        cat "$in_sample_file"
+
+        if [ $output -eq 1 ]; then
+          printf "${blue}=== Received Output Data ===\n${reset}"
+          cat my_out.txt
+        fi
+
+        echo
+      fi
+
+      rm -f my_out.txt out_data_diff.txt
+    done
+  fi
 fi
 
 user_input=0
@@ -238,7 +337,7 @@ if [ $user_input -eq 1 ]; then
     exit 0
   fi
 
-  if [ $input_files -eq 0 ]; then
+  if [[ "$RUN_SAMPLE_TESTS" == 1 && $input_files == 0 ]]; then
     printf "${red_bold}\U26A0 Warning:${reset} No sample input data found in %s\n\n" "${sample_dir_path}"
   fi
   if [ $CONTINUE_AFTER_TESTS -eq 1 ]; then
@@ -254,38 +353,43 @@ else
   if [ $output_files -eq 1 ]; then
     out_sample_file=$(ls ${sample_dir_path}*_out.txt 2> /dev/null | head -n 1)
 
-    $program_path > my_out.txt
+    timeout $TIMEOUT $program_path > my_out.txt
 
-    diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
-    diff_exit_status=$?
+    exit_code=$?
+    if [ $exit_code -eq 124 ]; then
+      printf "${red_bold}\U26A0 The program was terminated due to a ${TIMEOUT} timeout.\n${reset}"
+    else
+      diff "$out_sample_file" my_out.txt > out_data_diff.txt 2>/dev/null
+      diff_exit_status=$?
 
-    # if the diff command returned NO difference in the compared files
-    if [ $diff_exit_status -eq 0 ]; then
-      printf "${green_bold}\U2714 OK:${reset} %s${dark_gray}\n" "$out_sample_file"
-      cat "$out_sample_file"
-    # if the diff command returned SOME difference in the compared files
-    elif [ $diff_exit_status -eq 1 ]; then
-      printf "${red_bold}\U25BC Fail: \U25BC \n${reset}"
+      # if the diff command returned NO difference in the compared files
+      if [ $diff_exit_status -eq 0 ]; then
+        printf "${green_bold}\U2714 OK:${reset} %s${dark_gray}\n" "$out_sample_file"
+        cat "$out_sample_file"
+      # if the diff command returned SOME difference in the compared files
+      elif [ $diff_exit_status -eq 1 ]; then
+        printf "${red_bold}\U25BC Fail: \U25BC \n${reset}"
 
-      printf "${blue}=== Expected Sample Output Data ===\n${reset}"
-      cat "$out_sample_file"
+        printf "${blue}=== Expected Sample Output Data ===\n${reset}"
+        cat "$out_sample_file"
 
-      printf "${blue}=== Received Output Data ===\n${reset}"
-      cat my_out.txt
+        printf "${blue}=== Received Output Data ===\n${reset}"
+        cat my_out.txt
 
-      if [ "$SHOW_DIFF" -eq 1 ]; then
-        printf "${blue}=== Output Data Difference ===\n${reset}"
+        if [ "$SHOW_DIFF" -eq 1 ]; then
+          printf "${blue}=== Output Data Difference ===\n${reset}"
 
-        cat out_data_diff.txt
+          cat out_data_diff.txt
 
-        # tail -n +2 out_data_diff.txt
+          # tail -n +2 out_data_diff.txt
 
-        # awk '
-        # /^</ { print "\033[32m" $0 "\033[0m" }
-        # /^>/ { print "\033[31m" $0 "\033[0m" }
-        # /^---/ { print $0 }
-        # ' out_data_diff.txt
+          # awk '
+          # /^</ { print "\033[32m" $0 "\033[0m" }
+          # /^>/ { print "\033[31m" $0 "\033[0m" }
+          # /^---/ { print $0 }
+          # ' out_data_diff.txt
 
+        fi
       fi
     fi
 
@@ -304,9 +408,9 @@ else
 
       new_program_path="${relative_path}/${program_name}_custom_assert"
 
-      $new_program_path
+      timeout $TIMEOUT "$new_program_path"
     else
-      { $program_path; } 2>/dev/null
+      timeout $TIMEOUT "$program_path" 2>/dev/null
 
       output=$($program_path 2>&1)
       assertion_error=$(echo "$output" | awk -F'`' '/Assertion/ {split($2,a,"'"'"'"); print a[1]}')
