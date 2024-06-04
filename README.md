@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧪🛠 test.sh
+# 🧪🛠️ test.sh
 
 ### An overengineered Bash script for the testing of C/C++ programs.
 
