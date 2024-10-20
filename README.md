@@ -4,7 +4,7 @@
 
 ### An overengineered Bash script for the testing of C/C++ programs.
 
-*(The instructions below have been made to work on **Linux** operating systems, specifically on **Ubuntu** (20.04 and 22.04))*
+*(The instructions below have been made to work on **Linux** operating systems, specifically on **Ubuntu 22.04** along with the prerequisite of having **Git** installed on your system.)*
 
 </div>
 
@@ -12,7 +12,11 @@
 
 ### Installation:
 
-`chmod +x ./test.sh`
+1. `git clone https://github.com/zahradnik-ondrej/test.sh.git`
+
+2. `cd test.sh`
+
+3. `chmod +x ./test.sh`
 
 ### Usage *(more examples [below](https://github.com/zahradnik-ondrej/test.sh?tab=readme-ov-file#examples))*:
 
